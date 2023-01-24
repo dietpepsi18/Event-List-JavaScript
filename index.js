@@ -27,14 +27,14 @@ const API = (() => {
     }).then((res) => res.json());
   };
 
-  //=>Update an event from from the server
+  //=>Update an event to the server
   const editEventFromServer = (id, newEvent) => {
     let data = fetch(URL + "/" + id, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(newItem),
+      body: JSON.stringify(newEvent),
     }).then((res) => res.json());
     return data;
   };
@@ -47,7 +47,8 @@ const API = (() => {
   };
 })();
 
-//================================= View ======================//
+//================================= View ============================//
+
 class EventView {
   constructor() {
     this.addNewEvent = document.querySelector(".header__add");
@@ -138,13 +139,14 @@ class EventView {
   }
 
   //=>show edit window
-  editEvent(item) {
+  showEditWindow(item) {
     let htmlId = "a" + item.id;
     let element = document.getElementById(htmlId);
+
     element.innerHTML = `
-         <th class="event-list__event"><input type="text" value=${item.eventName} /></th>
-              <th class="event-list__start"><input type="date" value=${item.startDate}/></th>
-              <th class="event-list__end"><input type="date" value=${item.endDate}/></th>
+         <th class="event-list__event"><input type="text" value=${item.eventName} ></th>
+              <th class="event-list__start"><input type="date" value=${item.startDate}></th>
+              <th class="event-list__end"><input type="date" value=${item.endDate}></th>
               <th class="event-list__actions">
                 <div class="event-list__save">
                   <svg
@@ -174,9 +176,47 @@ class EventView {
               </th>
     `;
   }
+
+  //=>show edited event
+  editEvent(item) {
+    let htmlId = "a" + item.id;
+    let element = document.getElementById(htmlId);
+    element.innerHTML = `
+        <th class="event-list__event">${item.eventName}</th>
+              <th class="event-list__start">${item.startDate}</th>
+              <th class="event-list__end">${item.endDate}</th>
+              <th class="event-list__actions">
+                <div class="event-list__edit">
+                  <svg
+                    focusable="false"
+                    aria-hidden="true"
+                    viewBox="0 0 24 24"
+                    data-testid="EditIcon"
+                    aria-label="fontSize small"
+                  >
+                    <path
+                      d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"
+                    ></path>
+                  </svg>
+                </div>
+                <div class="event-list__delete">
+                  <svg
+                    focusable="false"
+                    aria-hidden="true"
+                    viewBox="0 0 24 24"
+                    data-testid="DeleteIcon"
+                    aria-label="fontSize small"
+                  >
+                    <path
+                      d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"
+                    ></path>
+                  </svg>
+                </div>
+              </th>`;
+  }
 }
 
-//==================================== Model ======================//
+//==================================== Model ===============================//
 
 class EventModel {
   #list;
@@ -213,10 +253,25 @@ class EventModel {
     });
   }
 
+  //=>search for an event
+  searchEvent(id) {
+    for (let i = 0; i < this.#list.length; i++) {
+      if (this.#list[i].id + "" === id) {
+        return { ...this.#list[i] };
+      }
+    }
+  }
+
   //edit an event
-  editEvent(id) {
-    return API.editEventFromServer(id).then((data) => {
-      this.#list;
+  editEvent(id, newEvent) {
+    return API.editEventFromServer(id, newEvent).then((data) => {
+      for (let i = 0; i < this.#list.length; i++) {
+        if (this.#list[i].id + "" === id) {
+          this.#list[i] = { ...data };
+          break;
+        }
+      }
+      return data;
     });
   }
 }
@@ -238,7 +293,9 @@ class EventController {
     this.cancelNewEvent();
     this.addNewItemEvent();
     this.deleteEvent();
+    this.showEditWindowEvent();
     this.editEvent();
+    this.cancelEditEvent();
   }
 
   //
@@ -250,75 +307,104 @@ class EventController {
 
   //
   addNewItemEvent() {
-    this.view.eventList.addEventListener(
-      "click",
-      (e) => {
-        if (e.target.classList.contains("event-list__add")) {
-          let eInput = e.target.parentNode.parentNode.childNodes[1].firstChild;
-          let eStart = e.target.parentNode.parentNode.childNodes[3].firstChild;
-          let eEnd = e.target.parentNode.parentNode.childNodes[5].firstChild;
+    this.view.eventList.addEventListener("click", (e) => {
+      if (e.target.classList.contains("event-list__add")) {
+        let eInput = e.target.parentNode.parentNode.childNodes[1].firstChild;
+        let eStart = e.target.parentNode.parentNode.childNodes[3].firstChild;
+        let eEnd = e.target.parentNode.parentNode.childNodes[5].firstChild;
 
-          if (eInput.value && eStart.value && eEnd.value) {
-            let newEvent = {
-              eventName: eInput.value,
-              startDate: eStart.value,
-              endDate: eEnd.value,
-            };
+        if (eInput.value && eStart.value && eEnd.value) {
+          let newEvent = {
+            eventName: eInput.value,
+            startDate: eStart.value,
+            endDate: eEnd.value,
+          };
 
-            this.model.addEvent(newEvent).then((data) => {
-              let inputWindow = document.getElementById("new-window");
-              inputWindow.remove();
-              this.view.showAddedEvent(data);
-            });
-          } else {
-            alert("All the fields are required");
-          }
+          this.model.addEvent(newEvent).then((data) => {
+            let inputWindow = document.getElementById("new-window");
+            inputWindow.remove();
+            this.view.showAddedEvent(data);
+          });
+        } else {
+          alert("All the fields are required");
         }
-      },
-      false
-    );
+      }
+    });
   }
 
   //
   cancelNewEvent() {
-    this.view.eventList.addEventListener(
-      "click",
-      (e) => {
-        if (e.target.classList.contains("event-list__delete-input")) {
-          let inputWindow = document.getElementById("new-window");
-          inputWindow.remove();
-        }
-      },
-      false
-    );
+    this.view.eventList.addEventListener("click", (e) => {
+      if (e.target.classList.contains("event-list__delete-input")) {
+        let inputWindow = document.getElementById("new-window");
+        inputWindow.remove();
+      }
+    });
   }
 
   //delete an event
   deleteEvent() {
-    this.view.eventList.addEventListener(
-      "click",
-      (e) => {
-        if (e.target.classList.contains("event-list__delete")) {
-          let item = e.target.parentNode.parentNode;
-          let id = item.id.slice(1);
-          this.model.deleteEvent(id).then(() => {
-            this.view.deleteEvent(id);
-          });
-        }
-      },
-      false
-    );
+    this.view.eventList.addEventListener("click", (e) => {
+      if (e.target.classList.contains("event-list__delete")) {
+        let item = e.target.parentNode.parentNode;
+        let id = item.id.slice(1);
+        this.model.deleteEvent(id).then(() => {
+          this.view.deleteEvent(id);
+        });
+      }
+    });
   }
 
-  //edit an event
-  editEvent() {
+  //show edit event input window
+  showEditWindowEvent() {
     this.view.eventList.addEventListener("click", (e) => {
       if (e.target.classList.contains("event-list__edit")) {
         let item = e.target.parentNode.parentNode;
         let id = item.id.slice(1);
-        this.model.editEvent(id).then((data) => {
-          this.view.editEvent(data);
-        });
+
+        let eventObj = eventModel.searchEvent(id);
+        //console.log(event);
+        this.view.showEditWindow(eventObj);
+      }
+    });
+  }
+
+  //confirm edit an event
+  editEvent() {
+    this.view.eventList.addEventListener("click", (e) => {
+      if (e.target.classList.contains("event-list__save")) {
+        let eInput = e.target.parentNode.parentNode.childNodes[1].firstChild;
+        let eStart = e.target.parentNode.parentNode.childNodes[3].firstChild;
+        let eEnd = e.target.parentNode.parentNode.childNodes[5].firstChild;
+
+        if (eInput.value && eStart.value && eEnd.value) {
+          let newEvent = {
+            eventName: eInput.value,
+            startDate: eStart.value,
+            endDate: eEnd.value,
+            id: e.target.parentNode.parentNode.id.slice(1),
+          };
+
+          //console.log(newEvent);
+
+          this.model.editEvent(newEvent.id, newEvent).then((data) => {
+            this.view.editEvent(data);
+          });
+        } else {
+          alert("All the fields are required");
+        }
+      }
+    });
+  }
+
+  //cancel edit an event
+  cancelEditEvent() {
+    this.view.eventList.addEventListener("click", (e) => {
+      if (e.target.classList.contains("event-list__cancel")) {
+        let item = e.target.parentNode.parentNode;
+        let id = item.id.slice(1);
+        let eventObj = eventModel.searchEvent(id);
+        this.view.editEvent(eventObj);
       }
     });
   }
