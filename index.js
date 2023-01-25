@@ -142,9 +142,9 @@ class EventView {
   showEditWindow(item) {
     let htmlId = "a" + item.id;
     let element = document.getElementById(htmlId);
-
+    let eventName = item.eventName.replace(/\"/g, "&quot;");
     element.innerHTML = `
-         <th class="event-list__event"><input type="text" value=${item.eventName} ></th>
+         <th class="event-list__event"><input type="text" value="${eventName}"></th>
               <th class="event-list__start"><input type="date" value=${item.startDate}></th>
               <th class="event-list__end"><input type="date" value=${item.endDate}></th>
               <th class="event-list__actions">
